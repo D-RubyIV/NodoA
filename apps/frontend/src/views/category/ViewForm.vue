@@ -73,25 +73,21 @@ const categoryRules = reactive<FormRules<CategoryOverview>>({
       trigger: ["change", "blur"],
     },
   ],
-  // description: [
-  //   {
-  //     required: true,
-  //     validator(rule, value, callback, source, options) {
-  //       if (value === "" || value === undefined) {
-  //         callback(
-  //           new Error(t("pleaseInput") + " " + t("description").toLowerCase())
-  //         );
-  //       } else if (value.length < 5 || value.length > 250) {
-  //         callback(
-  //           new Error(t("description") + " " + t("from5To250").toLowerCase())
-  //         );
-  //       } else {
-  //         callback();
-  //       }
-  //     },
-  //     trigger: ["change", "blur"],
-  //   },
-  // ],
+  description: [
+    {
+      required: true,
+      validator(rule, value, callback, source, options) {
+        if (value && value.length > 250) {
+          callback(
+            new Error(t("description") + " " + t("max250").toLowerCase())
+          );
+        } else {
+          callback();
+        }
+      },
+      trigger: ["change", "blur"],
+    },
+  ],
 });
 
 const isDisabled = () => {

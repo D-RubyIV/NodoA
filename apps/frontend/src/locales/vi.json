@@ -64,5 +64,5 @@
   "max50": "tối đa 50 ký tự",
   "max250": "tối đa 250 ký tự",
   "validateDate": "Ngày 'Đến' phải lớn hơn ngày 'Từ'",
-    "ECONNABORTED": "Đã có lỗi trong quá trình xử lý, vui lòng thực hiện vào lúc khác!"
+  "ECONNABORTED": "Đã có lỗi trong quá trình xử lý, vui lòng thực hiện vào lúc khác!"
 }

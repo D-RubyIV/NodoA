@@ -2,8 +2,10 @@ package org.example.demo.dto.category.request;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,9 +30,9 @@ public class CategoryRequestDTO {
     @NoSpecialCharacterConstraint(message = "NoSpecialCharacter", groups = {GroupCreate.class, GroupUpdate.class})
     private String name;
 
-//    @Length(message = "Length-5-50", min = 5, max = 50, groups = {GroupCreate.class, GroupUpdate.class})
 //    @NotNull(message = "NotNull", groups = {GroupCreate.class, GroupUpdate.class})
 //    @NotBlank(message = "NotBlank", groups = {GroupCreate.class, GroupUpdate.class})
+    @Size(max = 250, message = "Max250", groups = {GroupCreate.class, GroupUpdate.class})
     private String description;
 
     @Length(message = "Length-5-15", min = 5, max = 15, groups = {GroupCreate.class})

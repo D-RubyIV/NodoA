@@ -28,9 +28,10 @@ public class ProductRequestDTO {
     @NoSpecialCharacterConstraint(message = "NoSpecialCharacter", groups = {GroupCreate.class, GroupUpdate.class})
     private String name;
 
-//    @Length(message = "Length-5-250", min = 5, max = 250, groups = {GroupCreate.class, GroupUpdate.class})  // 5-250 KI TU
+
 //    @NotNull(message = "NotNull", groups = {GroupCreate.class, GroupUpdate.class})
 //    @NotBlank(message = "NotBlank", groups = {GroupCreate.class, GroupUpdate.class})
+    @Size(max = 250, message = "Max250", groups = {GroupCreate.class, GroupUpdate.class})
     private String description;
 
     @NotNull(message = "NotNull", groups = {GroupCreate.class, GroupUpdate.class})
