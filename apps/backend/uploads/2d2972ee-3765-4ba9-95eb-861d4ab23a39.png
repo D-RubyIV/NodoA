@@ -1,0 +1,90 @@
+    -- 1 : 5 ông đi thiếu ngày công nhất
+-- Xóa thủ tục nếu nó đã tồn tại
+DROP PROCEDURE IF EXISTS GetEmployeeAttendanceReport;
+DELIMITER $$
+
+CREATE PROCEDURE GetEmployeeAttendanceReport(
+    IN p_month INT, 
+    IN p_year INT
+)
+BEGIN
+    -- Tính tổng số ngày làm việc trong tháng
+    DECLARE v_total_working_days INT;
+    SET v_total_working_days = (
+        SELECT COUNT(*)
+        FROM (
+            SELECT DATE(CONCAT(p_year, '-', p_month, '-', seq + 1)) AS work_date
+            FROM (
+                SELECT 0 AS seq UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL
+                SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL
+                SELECT 10 UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL
+                SELECT 15 UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19 UNION ALL
+                SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23 UNION ALL SELECT 24 UNION ALL
+                SELECT 25 UNION ALL SELECT 26 UNION ALL SELECT 27 UNION ALL SELECT 28 UNION ALL SELECT 29 UNION ALL
+                SELECT 30
+            ) AS seq_nums
+            WHERE seq + 1 <= DAY(LAST_DAY(CONCAT(p_year, '-', p_month, '-01')))
+        ) AS calendar
+        WHERE WEEKDAY(work_date) < 5  -- Loại trừ thứ Bảy (5) và Chủ Nhật (6)
+    );
+
+    -- Tính số ngày nhân viên không đủ công
+    SELECT
+        emp.employee_code,
+        emp.full_name,
+        dept.department_name,
+        v_total_working_days - COUNT(DISTINCT att.attendance_date) AS ngay_thieu_cong
+    FROM employee emp
+    LEFT JOIN employee_department_position edp ON emp.employee_id = edp.employee_id
+    LEFT JOIN department dept ON edp.department_id = dept.department_id
+    LEFT JOIN attendance att ON emp.employee_id = att.employee_id
+        AND MONTH(att.attendance_date) = p_month
+        AND YEAR(att.attendance_date) = p_year
+        AND att.check_in_time IS NOT NULL
+        AND att.check_out_time IS NOT NULL
+    WHERE emp.status = 'Đang làm việc'
+    GROUP BY emp.employee_id, emp.employee_code, emp.full_name, dept.department_name
+    ORDER BY ngay_thieu_cong DESC
+    LIMIT 5;
+END$$
+
+DELIMITER ;
+
+-- Gọi thủ tục
+CALL GetEmployeeAttendanceReport(8, 2024);
+-- 2 : tính đi làm muộn
+
+DELIMITER $$
+
+CREATE PROCEDURE GetLateArrivalReport(
+    IN p_month INT,
+    IN p_year INT,
+    IN p_day INT
+)
+BEGIN
+    -- Tổng hợp số lần đi làm muộn cho tháng và năm cụ thể, có thể bao gồm một ngày cụ thể
+    SELECT 
+        a.attendance_date AS Ngay,
+        COUNT(*) AS So_lan_di_muon
+    FROM attendance a
+    WHERE MONTH(a.attendance_date) = p_month
+      AND YEAR(a.attendance_date) = p_year
+      AND (
+        -- Kiểm tra nếu ngày cụ thể được cung cấp, chỉ lọc theo ngày đó
+        (p_day IS NOT NULL AND DAY(a.attendance_date) = p_day)
+        OR (p_day IS NULL)
+      )
+      AND (
+        -- Kiểm tra buổi sáng: check-in muộn hơn 08:30:00, không phải 'Nghỉ phép'
+        (TIME(a.check_in_time) > '08:30:00' AND a.status NOT IN ('Nghỉ phép'))
+        -- Kiểm tra buổi chiều: check-in muộn hơn 13:30:00, không phải 'OT' hoặc 'Nghỉ phép'
+        OR (TIME(a.check_in_time) > '13:30:00' AND a.status NOT IN ('OT', 'Nghỉ phép'))
+      )
+    GROUP BY a.attendance_date
+    ORDER BY a.attendance_date;
+END$$
+
+DELIMITER ;
+
+-- Gọi thủ tục để tính đi làm muộn
+CALL GetLateArrivalReport(8, 2024, NULL);
