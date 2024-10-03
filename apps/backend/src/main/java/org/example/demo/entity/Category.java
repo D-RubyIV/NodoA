@@ -34,7 +34,7 @@ public class Category extends Base{
     @Enumerated(EnumType.STRING)
     private EStatus status;
 
-    @OneToMany(mappedBy = "category")
+    @OneToMany(mappedBy = "category", cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @ToString.Exclude
     private List<ProductCategory> productCategories;
 }

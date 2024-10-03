@@ -2,6 +2,7 @@ package org.example.demo.exporter;
 
 import java.io.IOException;
 import java.util.List;
+
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Cell;
@@ -10,14 +11,16 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.example.demo.dto.category.response.CategoryResponseDTO;
 import org.example.demo.entity.Category;
+import org.example.demo.exception.CustomExceptions;
 
 public class CategoryExcelExporter {
     private XSSFWorkbook workbook;
     private XSSFSheet sheet;
-    private List<Category> listCategory;
+    private List<CategoryResponseDTO> listCategory;
 
-    public CategoryExcelExporter(List<Category> listCategory) {
+    public CategoryExcelExporter(List<CategoryResponseDTO> listCategory) {
         this.listCategory = listCategory;
         workbook = new XSSFWorkbook();
     }
@@ -54,7 +57,7 @@ public class CategoryExcelExporter {
             cell.setCellValue((Integer) value);
         } else if (value instanceof Boolean) {
             cell.setCellValue((Boolean) value);
-        }else {
+        } else {
             cell.setCellValue(value.toString());
         }
         cell.setCellStyle(style);
@@ -68,7 +71,7 @@ public class CategoryExcelExporter {
         font.setFontHeight(14);
         style.setFont(font);
 
-        for (Category user : listCategory) {
+        for (CategoryResponseDTO user : listCategory) {
             Row row = sheet.createRow(rowCount++);
             int columnCount = 0;
 
@@ -85,15 +88,20 @@ public class CategoryExcelExporter {
         }
     }
 
-    public void export(HttpServletResponse response) throws IOException {
+    public void export(HttpServletResponse response) {
         writeHeaderLine();
         writeDataLines();
 
-        ServletOutputStream outputStream = response.getOutputStream();
-        workbook.write(outputStream);
-        workbook.close();
+        try {
+            ServletOutputStream outputStream = response.getOutputStream();
+            workbook.write(outputStream);
+            workbook.close();
 
-        outputStream.close();
+            outputStream.close();
+
+        } catch (Exception ex) {
+            throw new CustomExceptions.ExcelExportException("ExcelExportException");
+        }
 
     }
 }

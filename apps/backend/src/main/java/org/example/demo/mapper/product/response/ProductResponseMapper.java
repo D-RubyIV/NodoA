@@ -21,10 +21,7 @@ public interface ProductResponseMapper extends IMapper<Product, ProductResponseD
             List<Category> listCategories = product.getProductCategories().stream().map(ProductCategory::getCategory).toList();
             if (!listCategories.isEmpty()){
                 // Set Course Code
-                System.out.println(listCategories);
                 List<String> listCode = listCategories.stream().map(Category::getCategoryCode).toList();
-                System.out.println(listCode);
-                System.out.println("---------------------");
                 if (!listCode.isEmpty()){
                     productResponseDTO.setCategoryCodes(String.join(", ", listCode));
                 }

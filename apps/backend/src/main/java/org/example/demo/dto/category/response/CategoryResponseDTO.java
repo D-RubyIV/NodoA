@@ -16,12 +16,8 @@ import java.time.LocalDate;
 public class CategoryResponseDTO extends BaseDTO {
     private Long id;
     private String name;
-    private String createdBy;
-    private String modifiedBy;
     private String description;
     private String categoryCode;
     private String image;
     private EStatus status;
-    private LocalDate createdDate;
-    private LocalDate modifiedDate;
 }

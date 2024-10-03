@@ -34,24 +34,24 @@ instance.interceptors.response.use(
   },
   function (error) {
     const lang = localStorage.getItem("lang");
-    if (error.response) {
-      const status = error.response.status;
-      const data = error.response.data;
-
-      if (status === 400) {
-        console.log("Error 400:", data);
-        if (data?.error) {
-          openMessageFail(data.error);
-        }
-      }
-    } else if (
-      error.code === "ECONNABORTED" ||
-      error.message === "Network Error"
-    ) {
-      openMessageFail(translator.getT("ECONNABORTED"));
-    } else {
-      openMessageFail(translator.getT("ECONNABORTED"));
-    }
+    // if (error.response) {
+    //   const status = error.response.status;
+    //   const data = error.response.data;
+    //
+    //   if (status === 400) {
+    //     console.log("Error 400:", data);
+    //     if (data?.error) {
+    //       openMessageFail(data.error);
+    //     }
+    //   }
+    // } else if (
+    //   error.code === "ECONNABORTED" ||
+    //   error.message === "Network Error"
+    // ) {
+    //   openMessageFail(translator.getT("ECONNABORTED"));
+    // } else {
+    //   openMessageFail(translator.getT("ECONNABORTED"));
+    // }
 
     return Promise.reject(error);
   }

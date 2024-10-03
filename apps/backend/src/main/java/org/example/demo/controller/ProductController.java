@@ -36,17 +36,15 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    @Autowired
-    private ProductResponseMapper productResponseMapper;
 
     @GetMapping(value = "")
-    public ResponseEntity<?> findAll(){
+    public ResponseEntity<?> findAll() {
         return ResponseEntity.ok(productService.findAll());
     }
 
     @GetMapping(value = "{id}")
-    public ResponseEntity<?> findById(@PathVariable Long id) throws BadRequestException {
-        return ResponseEntity.ok(productResponseMapper.toDTO(productService.findById(id)));
+    public ResponseEntity<?> findById(@PathVariable Long id) {
+        return ResponseEntity.ok((productService.findById(id)));
     }
 
     @RequestMapping(value = "overview")
@@ -62,29 +60,28 @@ public class ProductController {
         if (bindingResult.hasErrors()) {
             throw new BindException(bindingResult);
         }
-        String query = pageableObject.getQuery();
-        return ResponseEntity.ok(productService.findAllOverviewByPage(name, productCode, categoryCode, createdFrom, createdTo, pageableObject).map(s -> productResponseMapper.toDTO(s)));
+        return ResponseEntity.ok(productService.findAllOverviewByPage(name, productCode, categoryCode, createdFrom, createdTo, pageableObject));
     }
 
     @PostMapping(value = "", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> create(@Validated(GroupCreate.class) @ModelAttribute ProductRequestDTO productRequestDTO, BindingResult bindingResult) throws BindException, BadRequestException {
-        if (bindingResult.hasErrors()){
+    public ResponseEntity<ProductResponseDTO> create(@Validated(GroupCreate.class) @ModelAttribute ProductRequestDTO productRequestDTO, BindingResult bindingResult) throws BindException {
+        if (bindingResult.hasErrors()) {
             throw new BindException(bindingResult);
         }
-        return ResponseEntity.ok(productResponseMapper.toDTO(productService.save(productRequestDTO)));
+        return ResponseEntity.ok(productService.save(productRequestDTO));
     }
 
     @PutMapping(value = "{id}", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> update(@PathVariable Long id , @Validated(GroupUpdate.class) @ModelAttribute ProductRequestDTO productRequestDTO, BindingResult bindingResult) throws BindException, BadRequestException {
-        if (bindingResult.hasErrors()){
+    public ResponseEntity<ProductResponseDTO> update(@PathVariable Long id, @Validated(GroupUpdate.class) @ModelAttribute ProductRequestDTO productRequestDTO, BindingResult bindingResult) throws BindException {
+        if (bindingResult.hasErrors()) {
             throw new BindException(bindingResult);
         }
-        return ResponseEntity.ok(productResponseMapper.toDTO(productService.update(id, productRequestDTO)));
+        return ResponseEntity.ok(productService.update(id, productRequestDTO));
     }
 
     @DeleteMapping(value = "{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) throws BadRequestException {
-        return ResponseEntity.ok(productResponseMapper.toDTO(productService.softDelete(id)));
+    public ResponseEntity<ProductResponseDTO> delete(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.softDelete(id));
     }
 
     @GetMapping("/export/excel")
@@ -95,7 +92,7 @@ public class ProductController {
             @RequestParam(value = "createdFrom", required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate createdFrom,
             @RequestParam(value = "createdTo", required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate createdTo,
             HttpServletResponse response
-    ) throws IOException {
+    ) {
         response.setContentType("application/octet-stream");
         DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
         String currentDateTime = dateFormatter.format(new Date());
@@ -103,7 +100,7 @@ public class ProductController {
         String headerValue = "attachment; filename=users_" + currentDateTime + ".xlsx";
         response.setHeader(headerKey, headerValue);
 
-        List<ProductResponseDTO> listUsers = productService.findAllOverviewByPage(name, productCode, categoryCode, createdFrom, createdTo, null).getContent().stream().map(s -> productResponseMapper.toDTO(s)).toList();
+        List<ProductResponseDTO> listUsers = productService.findAllOverviewByPage(name, productCode, categoryCode, createdFrom, createdTo, null).getContent().stream().toList();
 
         ProductExcelExporter excelExporter = new ProductExcelExporter(listUsers);
         excelExporter.export(response);

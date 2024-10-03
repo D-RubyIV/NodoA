@@ -1,11 +1,13 @@
 package org.example.demo.exception;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.ConstraintViolationException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
@@ -14,8 +16,10 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -27,6 +31,10 @@ import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(String.class, new StringTrimmerEditor(true));
+    }
     @Autowired
     private MessageSource messageSource;
 
@@ -48,6 +56,18 @@ public class GlobalExceptionHandler {
         Integer httpStatus;
         @JsonProperty(value = "error")
         private String error;
+    }
+
+    @ExceptionHandler(CustomExceptions.ExcelExportException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ResponseEntity<String> handleExcelExportException(CustomExceptions.ExcelExportException e) {
+        return new ResponseEntity<>("not valid due to validation error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(CustomExceptions.CustomFileErrorException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ResponseEntity<String> handleCustomFileErrorException(CustomExceptions.CustomFileErrorException e) {
+        return new ResponseEntity<>("not valid due to validation error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class})
@@ -119,6 +139,13 @@ public class GlobalExceptionHandler {
         CustomError error = new CustomError(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(error);
     }
+
+    @ExceptionHandler({CustomExceptions.CustomBadRequest.class})
+    public ResponseEntity<?> handleCustomBadRequestException(CustomExceptions.CustomBadRequest ex) {
+        CustomError error = new CustomError(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST.value()).body(error);
+    }
+
 
     @ExceptionHandler({CustomExceptions.ExistCodeException.class})
     public ResponseEntity<?> handleExistCodeException(CustomExceptions.ExistCodeException ex) {

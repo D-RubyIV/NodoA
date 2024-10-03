@@ -18,19 +18,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             LEFT JOIN FETCH p.productCategories bc
             LEFT JOIN FETCH bc.category
             WHERE
-            (:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%')))
+            (:name IS NULL OR LOWER(p.name) LIKE LOWER(:name))
             AND
-            (:productCode IS NULL OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :productCode, '%')))
+            (:productCode IS NULL OR LOWER(p.productCode) LIKE LOWER(:productCode))
             AND
             (:createdFrom IS NULL OR p.createdDate >= :createdFrom)
             AND
             (:createdTo IS NULL OR p.createdDate <= :createdTo)
             AND
-            (p.status = 'ACTIVE')
+            (LOWER(p.status) like 'active')
             AND
-            (bc.status = 'ACTIVE')
+            (bc IS NULL OR LOWER(bc.status) LIKE 'active')
             AND
-            (:categoryCode IS NULL OR EXISTS(SELECT 1 FROM ProductCategory pcc JOIN pcc.category pccc WHERE pcc.product = p AND LOWER(pcc.status) LIKE 'active' AND LOWER(pccc.categoryCode) LIKE LOWER(CONCAT('%', :categoryCode, '%'))) )
+            (:categoryCode IS NULL OR EXISTS(SELECT 1 FROM ProductCategory pcc JOIN pcc.category pccc WHERE pcc.product = p AND LOWER(pcc.status) LIKE 'active' AND LOWER(pccc.categoryCode) LIKE LOWER(:categoryCode)) )
             """)
     Page<Product> findAllByPageWithQuery(
             @Param("name") String name,
@@ -42,16 +42,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     );
 
     @Query(value = """
-                        SELECT p FROM Product p
-                        LEFT JOIN FETCH p.productCategories bc
-                        LEFT JOIN FETCH bc.category bcc
-                        WHERE
-                        (:id IS NULL OR p.id = :id)
-                        AND
-                        (p.status = 'ACTIVE')
-                        AND
-                        (bc.status = 'ACTIVE')
+           SELECT p FROM Product p
+           LEFT JOIN FETCH p.productCategories bc
+           LEFT JOIN FETCH bc.category bcc
+           WHERE
+           (:id IS NULL OR p.id = :id)
+           AND
+           (bc IS NULL OR LOWER(bc.status) LIKE 'active')
             """)
-    Optional<Product> findByIdWithCategoryActive(@Param("id") Long id);
+    Optional<Product> findByIdWithHQL(@Param("id") Long id);
     Optional<Product> findByProductCode(String code);
 }

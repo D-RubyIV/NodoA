@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref } from "vue";
-import { Setting } from "@element-plus/icons-vue";
+import { markRaw, ref } from "vue";
+import { Fries, House, Setting, TakeawayBox } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 
@@ -20,42 +20,65 @@ const items = [
   {
     label: t("homePage"),
     value: "/admin/dashboard",
+    icon: markRaw(House),
   },
   {
     label: t("category"),
     value: "/admin/category",
+    icon: markRaw(TakeawayBox),
   },
   {
     label: t("product"),
     value: "/admin/product",
+    icon: markRaw(Fries),
   },
 ];
 </script>
 <template>
   <el-container class="layout-container-demo" style="height: 100vh">
-    <el-aside width="200px" class="!bg-white">
+    <el-aside width="200px" class="!bg-blue-950">
       <div class="!flex !flex-col !justify-between h-full">
         <div>
-          <el-menu>
-            <div class="text-[25px] py-5">NODO</div>
+          <el-menu class="!bg-blue-950 text-white">
+            <div class="text-[25px] py-5 font-semibold">NODO</div>
+            <hr />
             <router-link
               :to="item.value"
               v-for="(item, index) in items"
               :key="index"
-              :class="routeApp.path === item.value ? 'bg-gray-300' : ''"
+              :class="
+                routeApp.path === item.value ? 'bg-blue-500 text-white' : ''
+              "
               @click="selectNavbar = item.value"
-              class="w-full !h-full p-8 inline-block"
+              class="w-full !h-full p-8 inline-block font-semibold hover:bg-blue-300"
             >
-              <p>{{ item.label }}</p>
+              <div class="flex gap-3">
+                <p>
+                  <el-icon>
+                    <component :is="item.icon"></component>
+                  </el-icon>
+                </p>
+                <p>{{ item.label }}</p>
+              </div>
             </router-link>
           </el-menu>
         </div>
-        <div class="py-5 flex gap-5 justify-center">
+        <div class="py-5 flex gap-5 justify-center text-white">
           <div>
-            <button @click="onChangeLang('en')">EN</button>
+            <button
+              @click="onChangeLang('en')"
+              :class="locale === 'en' ? 'underline underline-offset-2' : ''"
+            >
+              EN
+            </button>
           </div>
           <div>
-            <button @click="onChangeLang('vi')">VI</button>
+            <button
+              @click="onChangeLang('vi')"
+              :class="locale === 'vi' ? 'underline underline-offset-2' : ''"
+            >
+              VI
+            </button>
           </div>
         </div>
       </div>

@@ -5,7 +5,6 @@ import ViewForm from "@/views/category/ViewForm.vue";
 import { Action, CategoryOverview } from "@/views/category/index";
 import mitt from "mitt";
 import { useI18n } from "vue-i18n";
-import { Custom } from "@/axios/customAxios";
 
 type Tab = {
   title: string;
@@ -101,7 +100,7 @@ const removeTab = (targetName: string) => {
 
 <style>
 .demo-tabs > .el-tabs__content {
-  padding: 32px;
+  padding: 0;
   color: #6b778c;
   font-size: 32px;
   font-weight: 600;

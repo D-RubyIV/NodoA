@@ -67,7 +67,7 @@ VALUES
 INSERT INTO product (created_date, modified_date, price, quantity, created_by, description, modified_by, name, product_code, status)
 VALUES
 ('2024-09-01', '2024-09-01', 99, 10, 'admin', 'Smartphone', 'admin', 'Smartphone XYZ', 'P0001', 'ACTIVE'),
-('2024-09-02', '2024-09-02', 19, 50, 'admin', 'T-shirt', 'admin', 'Cool T-shirt', 'P0002', 'ACTIVE'),
+('2024-09-02', '2024-09-02', 19, 50, 'admin', 'Tshirt', 'admin', 'Cool T-shirt', 'P0002', 'ACTIVE'),
 ('2024-09-03', '2024-09-03', 299, 5, 'admin', 'Washing Machine', 'admin', 'Front Load Washing Machine', 'P0003', 'ACTIVE'),
 ('2024-09-04', '2024-09-04', 12, 20, 'admin', 'Novel', 'admin', 'Best Selling Novel', 'P0004', 'ACTIVE'),
 ('2024-09-05', '2024-09-05', 29, 15, 'admin', 'Action Figure', 'admin', 'Superhero Action Figure', 'P0005', 'ACTIVE'),
@@ -101,3 +101,8 @@ VALUES
 ('2024-09-15', '2024-09-15', 'ACTIVE', 15, 15, 'admin', 'admin');
 
 
+
+
+
+use nodo;
+SELECT * FROM product p WHERE p.name LIKE "%\\_%"

@@ -1,37 +1,35 @@
 package org.example.demo.service;
 
-import org.apache.coyote.BadRequestException;
 import org.example.demo.dto.product.request.ProductRequestDTO;
+import org.example.demo.dto.product.response.ProductResponseDTO;
 import org.example.demo.entity.Category;
 import org.example.demo.entity.Product;
 import org.example.demo.entity.ProductCategory;
 import org.example.demo.enums.EStatus;
+import org.example.demo.exception.CustomExceptions;
 import org.example.demo.mapper.product.request.ProductRequestMapper;
+import org.example.demo.mapper.product.response.ProductResponseMapper;
 import org.example.demo.repository.CategoryRepository;
 import org.example.demo.repository.ProductCategoryRepository;
 import org.example.demo.repository.ProductRepository;
+import org.example.demo.utils.CustomStringUtil;
 import org.example.demo.utils.FileUploadUtil;
 import org.example.demo.utils.PageableObject;
 import org.example.demo.utils.Translator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
 
 @Service
-public class ProductService implements IService<Product, Long, ProductRequestDTO> {
+public class ProductService implements IService<Product, Long, ProductRequestDTO, ProductResponseDTO> {
 
     @Autowired
     private CategoryRepository categoryRepository;
@@ -52,9 +50,15 @@ public class ProductService implements IService<Product, Long, ProductRequestDTO
     private ProductCategoryRepository productCategoryRepository;
 
     @Autowired
+    private ProductResponseMapper productResponseMapper;
+
+    @Autowired
     private Translator translator;
 
-    public Page<Product> findAllOverviewByPage(
+    @Autowired
+    private CustomStringUtil customStringUtil;
+
+    public Page<ProductResponseDTO> findAllOverviewByPage(
             String name,
             String productCode,
             String categoryCode,
@@ -62,44 +66,60 @@ public class ProductService implements IService<Product, Long, ProductRequestDTO
             LocalDate createdTo,
             PageableObject pageableObject
     ) {
+        name = customStringUtil.formatSearchParam(name);
+        productCode = customStringUtil.formatSearchParam(productCode);
+        categoryCode = customStringUtil.formatSearchParam(categoryCode);
         if (pageableObject != null) {
             {
                 Pageable pageable = pageableObject.toPageRequest();
                 String query = pageableObject.getQuery();
-                return productRepository.findAllByPageWithQuery(name, productCode, categoryCode, createdFrom, createdTo, pageable);
+                System.out.println("NAME: " + name);
+                System.out.println("productCode: " + productCode);
+                System.out.println("categoryCode: " + categoryCode);
+                return productRepository.findAllByPageWithQuery(name, productCode, categoryCode, createdFrom, createdTo, pageable).map(s -> productResponseMapper.toDTO(s));
             }
         } else {
-            return productRepository.findAllByPageWithQuery(name, productCode, categoryCode, createdFrom, createdTo, null);
+            return productRepository.findAllByPageWithQuery(name, productCode, categoryCode, createdFrom, createdTo, null).map(s -> productResponseMapper.toDTO(s));
         }
     }
 
     @Override
-    public List<Product> findAll() {
-        return productRepository.findAll();
+    public List<ProductResponseDTO> findAll() {
+        return productResponseMapper.toListDTO(productRepository.findAll());
     }
 
     @Override
-    public Product findById(Long aLong) throws BadRequestException {
-        return productRepository.findByIdWithCategoryActive(aLong).orElseThrow(() -> new BadRequestException(translator.toLocale("NotFound", new Object[]{translator.toLocale("Product")})));
+    public ProductResponseDTO findById(Long aLong) {
+        return productResponseMapper.toDTO(productRepository.findByIdWithHQL(aLong).orElseThrow(() -> new CustomExceptions.CustomBadRequest(translator.toLocale("NotFound", new Object[]{translator.toLocale("Product")}))));
+    }
+
+    public Product findEntityById(Long aLong) {
+        return productRepository.findByIdWithHQL(aLong).orElseThrow(() -> new CustomExceptions.CustomBadRequest(translator.toLocale("NotFound", new Object[]{translator.toLocale("Product")})));
     }
 
     @Override
-    @Transactional(rollbackFor = BadRequestException.class)
-    public Product softDelete(Long aLong) throws BadRequestException {
-        Product product = findById(aLong);
-        product.setStatus(EStatus.INACTIVE);
-        return productRepository.save(product);
+    @Transactional
+    public ProductResponseDTO softDelete(Long aLong){
+        Product product = findEntityById(aLong);
+        if (product.getStatus() == EStatus.INACTIVE){
+            throw new CustomExceptions.CustomBadRequest(translator.toLocale("DeletedBefore", new Object[]{translator.toLocale("Product")}));
+        }
+        else{
+            product.setStatus(EStatus.INACTIVE);
+            return productResponseMapper.toDTO(productRepository.save(product));
+        }
     }
 
     @Override
-    @Transactional(rollbackFor = BadRequestException.class)
-    public Product save(ProductRequestDTO requestDTO) throws BadRequestException {
+    @Transactional
+    public ProductResponseDTO save(ProductRequestDTO requestDTO) {
         Product product = productRequestMapper.toEntity(requestDTO);
         // Check trùng mã
         if (productRepository.findByProductCode(requestDTO.getProductCode()).isPresent()) {
-            throw new BadRequestException(translator.toLocale("ExistCodeException"));
+            throw new CustomExceptions.CustomBadRequest(translator.toLocale("ExistCodeException"));
         } else {
-            Product productSaved = productRepository.save(product);
+//            Product productSaved = productRepository.save(product);
+            Product productSaved =  product;
             // Get list category
             List<Category> categoriesInRequest = getAndValidateCategories(requestDTO);
             List<ProductCategory> productCategories = new ArrayList<>();
@@ -108,10 +128,13 @@ public class ProductService implements IService<Product, Long, ProductRequestDTO
                 productCategory.setProduct(productSaved);
                 productCategory.setCategory(category);
                 productCategory.setStatus(EStatus.ACTIVE);
-                productCategories.add(productCategoryRepository.save(productCategory));
+                System.out.println("------");
+                productCategories.add(productCategory);
             });
             product.setStatus(EStatus.ACTIVE);
-            product.setProductCategories(productCategories);
+            List<ProductCategory> productCategoriesSaved = productCategoryRepository.saveAll(productCategories);
+            product.setProductCategories(productCategoriesSaved);
+            System.out.println("++++++");
             if (requestDTO.getFile() != null) {
                 try {
                     String nameImage = fileUploadUtil.saveFile("", requestDTO.getFile(), "");
@@ -120,14 +143,17 @@ public class ProductService implements IService<Product, Long, ProductRequestDTO
                     throw new RuntimeException(e);
                 }
             }
-            return productRepository.save(product);
+            return productResponseMapper.toDTO(productRepository.save(product));
         }
     }
 
     @Override
-    @Transactional(rollbackFor = BadRequestException.class)
-    public Product update(Long aLong, ProductRequestDTO requestDTO) throws BadRequestException {
-        Product product = findById(aLong);
+    @Transactional
+    public ProductResponseDTO update(Long aLong, ProductRequestDTO requestDTO) {
+        Product product = findEntityById(aLong);
+        if (product.getStatus() == EStatus.INACTIVE){
+            throw new CustomExceptions.CustomBadRequest(translator.toLocale("DeletedBefore", new Object[]{translator.toLocale("Product")}));
+        }
         List<Category> categoriesInRequest = getAndValidateCategories(requestDTO);
 
         List<ProductCategory> productCategoriesInObject = product.getProductCategories();
@@ -158,7 +184,7 @@ public class ProductService implements IService<Product, Long, ProductRequestDTO
         product.setQuantity(requestDTO.getQuantity());
         product.setDescription(requestDTO.getDescription());
         product.setPrice(requestDTO.getPrice());
-        product.setProductCategories(productCategoryRepository.saveAll(list));
+        product.setProductCategories(list);
         if (requestDTO.getFile() != null) {
             try {
                 if (product.getImage() != null) {
@@ -170,14 +196,14 @@ public class ProductService implements IService<Product, Long, ProductRequestDTO
                 throw new RuntimeException(e);
             }
         }
-        return productRepository.save(product);
+        return productResponseMapper.toDTO(productRepository.save(product));
     }
 
-    private List<Category> getAndValidateCategories(ProductRequestDTO requestDTO) throws BadRequestException {
+    private List<Category> getAndValidateCategories(ProductRequestDTO requestDTO) {
         List<Category> categoriesInRequest = categoryRepository.findAllByCategoryCodeIn(requestDTO.getCategoryCodes());
-        if (categoriesInRequest.isEmpty()) {
-            throw new BadRequestException(translator.toLocale("NoHaveAnyCategoryExist"));
-        }
+//        if (categoriesInRequest.isEmpty()) {
+//            throw new CustomExceptions.CustomBadRequest(translator.toLocale("NoHaveAnyCategoryExist"));
+//        }
         return categoriesInRequest;
     }
 }

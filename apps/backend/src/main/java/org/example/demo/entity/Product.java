@@ -40,7 +40,7 @@ public class Product extends Base {
     @Enumerated(EnumType.STRING)
     private EStatus status;
 
-    @OneToMany(mappedBy = "product")
+    @OneToMany(mappedBy = "product", cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @ToString.Exclude
     private List<ProductCategory> productCategories;
 

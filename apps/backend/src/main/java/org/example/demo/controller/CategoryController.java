@@ -2,6 +2,9 @@ package org.example.demo.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.apache.coyote.BadRequestException;
 import org.example.demo.dto.category.request.CategoryRequestDTO;
 import org.example.demo.dto.category.response.CategoryResponseDTO;
@@ -15,6 +18,8 @@ import org.example.demo.mapper.product.response.ProductResponseMapper;
 import org.example.demo.service.CategoryService;
 import org.example.demo.service.ProductService;
 import org.example.demo.utils.PageableObject;
+import org.example.demo.validate.NoSpecialCharacterConstraint;
+import org.hibernate.validator.constraints.Length;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -38,8 +43,7 @@ import java.util.UUID;
 public class CategoryController {
     @Autowired
     private CategoryService categoryService;
-    @Autowired
-    private CategoryResponseMapper categoryResponseMapper;
+
 
     @RequestMapping(value = "overview")
     public ResponseEntity<Page<CategoryResponseDTO>> findAllByPageV2(
@@ -54,39 +58,39 @@ public class CategoryController {
             throw new BindException(bindingResult);
         }
         String query = pageableObject.getQuery();
-        return ResponseEntity.ok(categoryService.findAllOverviewByPage(name, code, createdFrom, createdTo, pageableObject).map(s -> categoryResponseMapper.toDTO(s)));
+        return ResponseEntity.ok(categoryService.findAllOverviewByPage(name, code, createdFrom, createdTo, pageableObject));
     }
 
     @GetMapping(value = "")
     public ResponseEntity<?> findAll() {
         Sort sort = Sort.by(Sort.Direction.fromString("asc"), "categoryCode");
-        return ResponseEntity.ok(categoryResponseMapper.toListDTO(categoryService.findAllSortCode(sort)));
+        return ResponseEntity.ok(categoryService.findAllSortCode(sort));
     }
 
     @GetMapping(value = "{id}")
-    public ResponseEntity<?> detail(@PathVariable Long id) throws BadRequestException {
-        return ResponseEntity.ok(categoryResponseMapper.toDTO(categoryService.findById(id)));
+    public ResponseEntity<?> detail(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.findById(id));
     }
 
     @DeleteMapping(value = "{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) throws BadRequestException {
-        return ResponseEntity.ok(categoryResponseMapper.toDTO(categoryService.softDelete(id)));
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.softDelete(id));
     }
 
     @PostMapping(value = "", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> create(@Validated(GroupCreate.class) @ModelAttribute CategoryRequestDTO categoryRequestDTO, BindingResult bindingResult) throws BindException, BadRequestException {
+    public ResponseEntity<?> create(@Validated(GroupCreate.class) @ModelAttribute CategoryRequestDTO categoryRequestDTO, BindingResult bindingResult) throws BindException {
         if (bindingResult.hasErrors()) {
             throw new BindException(bindingResult);
         }
-        return ResponseEntity.ok(categoryResponseMapper.toDTO(categoryService.save(categoryRequestDTO)));
+        return ResponseEntity.ok(categoryService.save(categoryRequestDTO));
     }
 
     @PutMapping(value = "{id}", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> update(@PathVariable Long id, @Validated(GroupUpdate.class) @ModelAttribute CategoryRequestDTO categoryRequestDTO, BindingResult bindingResult) throws BindException, BadRequestException {
+    public ResponseEntity<?> update(@PathVariable Long id, @Validated(GroupUpdate.class) @ModelAttribute CategoryRequestDTO categoryRequestDTO, BindingResult bindingResult) throws BindException {
         if (bindingResult.hasErrors()) {
             throw new BindException(bindingResult);
         }
-        return ResponseEntity.ok(categoryResponseMapper.toDTO(categoryService.update(id, categoryRequestDTO)));
+        return ResponseEntity.ok(categoryService.update(id, categoryRequestDTO));
     }
 
     @GetMapping("/export/excel")
@@ -96,7 +100,7 @@ public class CategoryController {
             @RequestParam(value = "createdFrom", required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate createdFrom,
             @RequestParam(value = "createdTo", required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate createdTo,
             HttpServletResponse response
-    ) throws IOException {
+    ) {
         response.setContentType("application/octet-stream");
         DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
         String currentDateTime = dateFormatter.format(new Date());
@@ -104,7 +108,7 @@ public class CategoryController {
         String headerValue = "attachment; filename=users_" + currentDateTime + ".xlsx";
         response.setHeader(headerKey, headerValue);
 
-        List<Category> listUsers = categoryService.findAllOverviewByPage(name, code, createdFrom, createdTo, null).getContent();
+        List<CategoryResponseDTO> listUsers = categoryService.findAllOverviewByPage(name, code, createdFrom, createdTo, null).getContent();
 
         CategoryExcelExporter excelExporter = new CategoryExcelExporter(listUsers);
         excelExporter.export(response);

@@ -59,7 +59,7 @@ public class ProductRequestDTO {
     @ImageSizeConstraint(maxSize = 2097152, message = "Max2MB", groups = {GroupCreate.class, GroupUpdate.class})
     private MultipartFile file;
 
-    @NotNull(message = "NotNull", groups = {GroupCreate.class, GroupUpdate.class})
-    @Size(min = 1, message = "Size-1", groups = {GroupCreate.class, GroupUpdate.class}) // ÍT NHẤT SỐ LƯỢNG LÀ 1
+//    @NotNull(message = "NotNull", groups = {GroupCreate.class, GroupUpdate.class})
+//    @Size(min = 1, message = "Size-1", groups = {GroupCreate.class, GroupUpdate.class}) // ÍT NHẤT SỐ LƯỢNG LÀ 1
     private List<String> categoryCodes;
 }

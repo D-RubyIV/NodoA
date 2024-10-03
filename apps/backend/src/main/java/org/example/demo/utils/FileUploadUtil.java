@@ -1,6 +1,7 @@
 package org.example.demo.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.demo.exception.CustomExceptions;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,7 +29,7 @@ public class FileUploadUtil {
             Files.copy(multipartFile.getInputStream(), this.root.resolve(nameFile));
             return nameFile;
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new CustomExceptions.CustomFileErrorException("FileErrorException");
         }
     }
 
@@ -40,7 +41,7 @@ public class FileUploadUtil {
                 return true;
             }
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new CustomExceptions.CustomFileErrorException("FileErrorException");
         }
         return false;
     }

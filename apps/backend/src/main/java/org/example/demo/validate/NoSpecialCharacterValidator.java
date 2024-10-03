@@ -5,8 +5,7 @@ import jakarta.validation.ConstraintValidatorContext;
 
 public class NoSpecialCharacterValidator implements ConstraintValidator<NoSpecialCharacterConstraint, String> {
 
-    // Cho phép chữ cái tiếng Việt có dấu và các ký tự thông thường (a-z, A-Z, 0-9, khoảng trắng)
-    private static final String SPECIAL_CHARACTERS_REGEX = "[^\\p{L}\\p{N} ]"; // \p{L}: chữ cái Unicode, \p{N}: chữ số
+    private static final String SPECIAL_CHARACTERS_REGEX = "[@#!~$%^&*()_+{}:\"<>?|]";
 
     @Override
     public void initialize(NoSpecialCharacterConstraint noSpecialCharacterConstraint) {
@@ -22,3 +21,4 @@ public class NoSpecialCharacterValidator implements ConstraintValidator<NoSpecia
         return !value.matches(".*" + SPECIAL_CHARACTERS_REGEX + ".*");
     }
 }
+

@@ -16,3 +16,6 @@ body{
     height: 250px;
     object-fit: contain;
 }
+.demo-tabs > .el-tabs__content {
+    padding: 0;
+}

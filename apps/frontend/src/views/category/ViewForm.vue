@@ -7,7 +7,7 @@ import { Plus } from "@element-plus/icons-vue";
 import type { UploadProps } from "element-plus";
 import { instance } from "@/axios/customAxios";
 const { t } = useI18n();
-const patternSpecialChars = /[!@#$%^&*(),.?":{}|<>]/; // Kiểm tra ký tự đặc biệt
+const patternSpecialChars = /[-!@#$%^&*(),.?":{}|<>_]/; // Kiểm tra ký tự đặc biệt
 
 const imgNotAvaiable =
   "https://th.bing.com/th/id/OIP.xHvCevAq3nc3vJv2UjgE2AHaHa?pid=ImgDet&w=205&h=205&c=7";
@@ -20,6 +20,7 @@ import { openMessageFail, openMessageSuccess } from "@/store/store";
 const emitter = inject<any>("emitter");
 const ruleFormRef = ref<FormInstance>();
 const previewImage = ref<string | null>(null);
+const apiUrl = process.env.VUE_APP_API_URL;
 
 const props = defineProps({
   selectedObject: {
@@ -59,7 +60,7 @@ const categoryRules = reactive<FormRules<CategoryOverview>>({
       validator(rule, value, callback, source, options) {
         if (value === "" || value === undefined) {
           callback(
-            new Error(t("pleaseInput") + " " + t("description").toLowerCase())
+            new Error(t("pleaseInput") + " " + t("categoryCode").toLowerCase())
           );
         } else if (patternSpecialChars.test(value)) {
           callback(new Error(t("noSpecialChars")));
@@ -133,6 +134,9 @@ const onSubmitCreate = async () => {
         emitter.emit("custom-event", "Hello from Component B");
       })
       .catch(function (error) {
+        if (error?.response?.status === 400) {
+          openMessageFail(error.response.data.error);
+        }
         console.error(error);
       });
   }
@@ -165,7 +169,9 @@ const onSubmitUpdate = async () => {
         openMessageSuccess(t("updateSuccess"));
       })
       .catch(function (error) {
-        openMessageFail(t("updateFail"));
+        if (error?.response?.status === 400) {
+          openMessageFail(error.response.data.error);
+        }
         console.error(error);
       });
   }
@@ -201,7 +207,9 @@ onMounted(() => {
       >
         <div class="grid grid-cols-3 gap-5">
           <!--          Image-->
-          <div class="col-span-1 bg-white rounded-b-md p-5 shadow-md">
+          <div
+            class="col-span-1 bg-white rounded-b-md p-5 shadow-md flex-col !flex !justify-center !items-center"
+          >
             <el-upload
               class="avatar-uploader"
               :show-file-list="false"
@@ -231,18 +239,45 @@ onMounted(() => {
                   class="avatar"
                   v-else-if="categoryObject.image"
                   alt=""
-                  :src="`http://localhost:8080/api/v1/file/${categoryObject.image}`"
+                  :src="`${apiUrl}/file/${categoryObject.image}`"
                 />
                 <img class="avatar" v-else :src="imgNotAvaiable" alt="" />
               </div>
             </el-upload>
-            <div class="text-[13px] grid grid-cols-2 gap-x-5">
-              <div class="text-right">
-                <p>{{ t("categoryCode") }}:</p>
+            <div v-if="action === 'DETAIL'">
+              <div
+                class="p-2 bg-gray-200 flex justify-center text-center text-sm rounded-md"
+              >
+                <div class="text-right">
+                  <p>{{ t("categoryCode") }}:</p>
+                </div>
+                <div class="text-left">
+                  <p>{{ categoryObject.categoryCode }}</p>
+                </div>
               </div>
-              <div class="text-left">
-                <p>{{ categoryObject.categoryCode }}</p>
+              <div
+                class="p-2 bg-green-100 flex justify-center text-center text-sm mt-2 rounded-md"
+              >
+                <div class="text-right">
+                  <p>{{ t("status") }}:</p>
+                </div>
+                <div class="text-left">
+                  <p>
+                    {{
+                      categoryObject.status === "ACTIVE"
+                        ? t("active")
+                        : categoryObject.status === "INACTIVE"
+                        ? t("inactive")
+                        : ""
+                    }}
+                  </p>
+                </div>
               </div>
+            </div>
+            <div
+              class="text-[13px] grid grid-cols-2 gap-x-5 gap-y-1 mt-2"
+              v-if="action !== 'CREATE' && action !== 'UPDATE'"
+            >
               <div class="text-right">
                 <p>{{ t("name") }}:</p>
               </div>
@@ -255,20 +290,7 @@ onMounted(() => {
               <div class="text-left">
                 <p>{{ categoryObject.description }}</p>
               </div>
-              <div class="text-right">
-                <p>{{ t("status") }}:</p>
-              </div>
-              <div class="text-left">
-                <p>
-                  {{
-                    categoryObject.status === "ACTIVE"
-                      ? t("active")
-                      : categoryObject.status === "INACTIVE"
-                      ? t("inactive")
-                      : ""
-                  }}
-                </p>
-              </div>
+
               <div class="text-right">
                 <p>{{ t("createdDate") }}:</p>
               </div>
@@ -307,13 +329,9 @@ onMounted(() => {
                   v-model="(categoryObject as CategoryOverview).name"
                 ></el-input>
               </el-form-item>
-              <el-form-item
-                :label="t('categoryCode')"
-                prop="categoryCode"
-                v-if="action === 'CREATE' || action === 'DETAIL'"
-              >
+              <el-form-item :label="t('categoryCode')" prop="categoryCode">
                 <el-input
-                  :disabled="isDisabled()"
+                  :disabled="action !== 'CREATE'"
                   v-model="(categoryObject as CategoryOverview).categoryCode"
                 ></el-input>
               </el-form-item>
@@ -384,15 +402,23 @@ onMounted(() => {
             </div>
             <div class="!flex !justify-end gap-5 py-5">
               <el-form-item>
-                <el-button @click="comeBackMain">{{ t("back") }}</el-button>
+                <el-button @click="comeBackMain" class="bg-gray-300">{{
+                  t("back")
+                }}</el-button>
               </el-form-item>
               <el-form-item>
-                <el-button v-if="action === 'CREATE'" @click="onSubmitCreate">{{
-                  t("create")
-                }}</el-button>
-                <el-button v-if="action === 'UPDATE'" @click="onSubmitUpdate">{{
-                  t("update")
-                }}</el-button>
+                <el-button
+                  v-if="action === 'CREATE'"
+                  @click="onSubmitCreate"
+                  class="bg-blue-400 text-white"
+                  >{{ t("create") }}</el-button
+                >
+                <el-button
+                  v-if="action === 'UPDATE'"
+                  @click="onSubmitUpdate"
+                  class="bg-blue-400 text-white"
+                  >{{ t("update") }}</el-button
+                >
               </el-form-item>
             </div>
           </div>

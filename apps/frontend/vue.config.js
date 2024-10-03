@@ -4,6 +4,7 @@ module.exports = defineConfig({
   lintOnSave: false,
   transpileDependencies: true,
   devServer: {
+    allowedHosts: ["common-webs-marry.loca.lt"],
     proxy: {
       "/api": {
         target: "https://f667-1-53-126-15.ngrok-free.app",

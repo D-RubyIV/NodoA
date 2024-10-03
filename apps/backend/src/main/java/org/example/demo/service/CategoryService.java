@@ -7,7 +7,9 @@ import org.example.demo.entity.Category;
 import org.example.demo.enums.EStatus;
 import org.example.demo.exception.CustomExceptions;
 import org.example.demo.mapper.category.request.CategoryRequestMapper;
+import org.example.demo.mapper.category.response.CategoryResponseMapper;
 import org.example.demo.repository.CategoryRepository;
+import org.example.demo.utils.CustomStringUtil;
 import org.example.demo.utils.FileUploadUtil;
 import org.example.demo.utils.PageableObject;
 import org.example.demo.utils.Translator;
@@ -26,7 +28,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
-public class CategoryService implements IService<Category, Long, CategoryRequestDTO> {
+public class CategoryService implements IService<Category, Long, CategoryRequestDTO, CategoryResponseDTO> {
     @Autowired
     private CategoryRepository categoryRepository;
 
@@ -40,53 +42,71 @@ public class CategoryService implements IService<Category, Long, CategoryRequest
     private MessageSource messageSource;
 
     @Autowired
+    private CategoryResponseMapper categoryResponseMapper;
+
+    @Autowired
     private Translator translator;
 
-    public Page<Category> findAllOverviewByPage(
+    @Autowired
+    private CustomStringUtil customStringUtil;
+
+    public Page<CategoryResponseDTO> findAllOverviewByPage(
             String name,
             String code,
             LocalDate createdFrom,
             LocalDate createdTo,
             PageableObject pageableObject
     ) {
+        name = customStringUtil.formatSearchParam(name);
+        code = customStringUtil.formatSearchParam(code);
         if(pageableObject != null){
             Pageable pageable = pageableObject.toPageRequest();
             String query = pageableObject.getQuery();
-            return categoryRepository.findAllByPageWithQuery(name, code, createdFrom, createdTo, pageable);
+            System.out.println("NAME: " + name);
+            return categoryRepository.findAllByPageWithQuery(name, code, createdFrom, createdTo, pageable).map(s -> categoryResponseMapper.toDTO(s));
         }
         else {
-            return categoryRepository.findAllByPageWithQuery(name, code, createdFrom, createdTo, null);
+            return categoryRepository.findAllByPageWithQuery(name, code, createdFrom, createdTo, null).map(s -> categoryResponseMapper.toDTO(s));
         }
     }
 
-    public List<Category> findAllSortCode(Sort sort) {
-        return categoryRepository.findAll(sort);
+    public List<CategoryResponseDTO> findAllSortCode(Sort sort) {
+        return categoryResponseMapper.toListDTO(categoryRepository.findAll(sort));
     }
 
     @Override
-    public List<Category> findAll() {
-        return categoryRepository.findAll();
+    public List<CategoryResponseDTO> findAll() {
+        return categoryResponseMapper.toListDTO(categoryRepository.findAll());
     }
 
     @Override
-    public Category findById(Long aLong) throws BadRequestException {
-        return categoryRepository.findById(aLong).orElseThrow(() -> new BadRequestException(translator.toLocale("NotFound", new Object[]{translator.toLocale("Category")})));
+    public CategoryResponseDTO findById(Long aLong) {
+        return categoryResponseMapper.toDTO(categoryRepository.findById(aLong).orElseThrow(() -> new CustomExceptions.CustomBadRequest(translator.toLocale("NotFound", new Object[]{translator.toLocale("Category")}))));
+    }
+
+    public Category findEntityById(Long aLong){
+        return categoryRepository.findById(aLong).orElseThrow(() -> new CustomExceptions.CustomBadRequest(translator.toLocale("NotFound", new Object[]{translator.toLocale("Category")})));
     }
 
     @Override
-    @Transactional(rollbackFor = BadRequestException.class)
-    public Category softDelete(Long aLong) throws BadRequestException {
-        Category category = findById(aLong);
-        category.setStatus(EStatus.INACTIVE);
-        return categoryRepository.save(category);
+    @Transactional
+    public CategoryResponseDTO softDelete(Long aLong) throws CustomExceptions.CustomBadRequest {
+        Category category = findEntityById(aLong);
+        if (category.getStatus() == EStatus.INACTIVE){
+            throw new CustomExceptions.CustomBadRequest(translator.toLocale("DeletedBefore", new Object[]{translator.toLocale("Category")}));
+        }
+        else {
+            category.setStatus(EStatus.INACTIVE);
+            return categoryResponseMapper.toDTO(categoryRepository.save(category));
+        }
     }
 
     @Override
-    @Transactional(rollbackFor = BadRequestException.class)
-    public Category save(CategoryRequestDTO requestDTO) throws BadRequestException {
+    @Transactional
+    public CategoryResponseDTO save(CategoryRequestDTO requestDTO){
         Category category = categoryRequestMapper.toEntity(requestDTO);
         if (categoryRepository.findByCategoryCode(requestDTO.getCategoryCode()).isPresent()) {
-            throw new BadRequestException(translator.toLocale("ExistCodeException"));
+            throw new CustomExceptions.CustomBadRequest(translator.toLocale("ExistCodeException"));
         } else {
             if (requestDTO.getFile() != null) {
                 try {
@@ -97,14 +117,17 @@ public class CategoryService implements IService<Category, Long, CategoryRequest
                 }
             }
             category.setStatus(EStatus.ACTIVE);
-            return categoryRepository.save(category);
+            return categoryResponseMapper.toDTO(categoryRepository.save(category));
         }
     }
 
     @Override
-    @Transactional(rollbackFor = BadRequestException.class)
-    public Category update(Long aLong, CategoryRequestDTO requestDTO) throws BadRequestException {
-        Category category = findById(aLong);
+    @Transactional
+    public CategoryResponseDTO update(Long aLong, CategoryRequestDTO requestDTO) {
+        Category category = findEntityById(aLong);
+        if (category.getStatus() == EStatus.INACTIVE){
+            throw new CustomExceptions.CustomBadRequest(translator.toLocale("DeletedBefore", new Object[]{translator.toLocale("Category")}));
+        }
         if (requestDTO.getFile() != null) {
             try {
                 if (category.getImage() != null){
@@ -120,6 +143,6 @@ public class CategoryService implements IService<Category, Long, CategoryRequest
         category.setName(requestDTO.getName());
         category.setStatus(requestDTO.getStatus());
         category.setDescription(requestDTO.getDescription());
-        return categoryRepository.save(category);
+        return categoryResponseMapper.toDTO(categoryRepository.save(category));
     }
 }

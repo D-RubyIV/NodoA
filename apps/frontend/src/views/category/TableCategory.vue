@@ -16,11 +16,7 @@ import {
 import { ElMessageBox, FormInstance } from "element-plus";
 import { instance } from "@/axios/customAxios";
 import { useI18n } from "vue-i18n";
-import {
-  handlePaste,
-  openMessageFail,
-  openMessageSuccess,
-} from "@/store/store";
+import { openMessageFail, openMessageSuccess } from "@/store/store";
 import { createSearchRules } from "@/views/category/searchValidate";
 
 const APIURL = process.env.VUE_APP_API_URL;
@@ -192,20 +188,24 @@ const downloadFile = async () => {
 };
 
 const openConfirmDelete = async (objetcId: number) => {
-  await ElMessageBox.confirm(t("confirmDelete"), t("warning"), {
-    confirmButtonText: t("ok"),
-    cancelButtonText: t("cancel"),
-    type: "warning",
-  })
-    .then(() => {
-      instance.delete(`category/${objetcId}`).then(function () {
-        fetchAll();
-        openMessageSuccess(t("deleteSuccess"));
-      });
-    })
-    .catch(() => {
-      openMessageFail(t("deleteFail"));
+  try {
+    await ElMessageBox.confirm(t("confirmDelete"), t("warning"), {
+      confirmButtonText: t("ok"),
+      cancelButtonText: t("cancel"),
+      type: "warning",
     });
+    await instance.delete(`category/${objetcId}`);
+    await fetchAll(); // Gọi lại dữ liệu sau khi xóa thành công
+    openMessageSuccess(t("deleteSuccess")); // Hiển thị thông báo thành công
+  } catch (error: any) {
+    console.log(error);
+    if (error?.response?.status === 400) {
+      openMessageFail(error.response.data.error);
+    } else if (error?.response?.status !== 400 && error !== "cancel") {
+      openMessageFail(t("deleteFail"));
+    }
+    console.error("Error deleting product:", error);
+  }
 };
 const dateError = ref<string | null>(null);
 
@@ -224,159 +224,200 @@ const ruleSearchFormRef = ref<FormInstance>();
         :rules="createSearchRules(t)"
         class="flex gap-2 py-2 justify-between"
       >
-        <el-form-item prop="name">
-          <el-input
-            v-model="param.name"
-            :placeholder="t('searchByCategoryName')"
-            :suffix-icon="Search"
-          />
-        </el-form-item>
-        <el-form-item prop="code">
-          <el-input
-            v-model="param.code"
-            :placeholder="t('searchByCategoryCode')"
-            :suffix-icon="Search"
-            :formatter="
+        <div class="flex gap-2">
+          <el-form-item prop="name" class="!w-[300px]">
+            <el-input
+              v-model="param.name"
+              :placeholder="t('searchByCategoryName')"
+              :suffix-icon="Search"
+            />
+          </el-form-item>
+          <el-form-item prop="code" class="!w-[300px]">
+            <el-input
+              v-model="param.code"
+              class="!min-w-[150px]"
+              :placeholder="t('searchByCategoryCode')"
+              :suffix-icon="Search"
+              :formatter="
           (value: any) => {
             return value.trim();
           }
         "
-          />
-        </el-form-item>
-        <div class="flex items-start flex-col">
-          <el-date-picker
-            v-model="param.createdFrom"
-            type="date"
-            :placeholder="t('fromDate')"
-            class="!min-w-[150px]"
-            format="YYYY/MM/DD"
-            value-format="YYYY-MM-DD"
-            @change="validateDates"
-          />
-          <div>
-            <p
-              v-show="errorStartDate.error === true"
-              class="text-[12px] text-red-400"
-            >
-              {{ errorStartDate.value }}
-            </p>
+            />
+          </el-form-item>
+          <div class="flex items-start flex-col">
+            <el-config-provider :locale="uiLocale">
+              <el-date-picker
+                v-model="param.createdFrom"
+                type="date"
+                :placeholder="t('fromDate')"
+                class="!min-w-[150px]"
+                format="YYYY/MM/DD"
+                value-format="YYYY-MM-DD"
+                @change="validateDates"
+              />
+            </el-config-provider>
+            <div>
+              <p
+                v-show="errorStartDate.error === true"
+                class="text-[12px] text-red-400"
+              >
+                {{ errorStartDate.value }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-start flex-col">
+            <el-config-provider :locale="uiLocale">
+              <el-date-picker
+                v-model="param.createdTo"
+                type="date"
+                :placeholder="t('toDate')"
+                class="!min-w-[150px]"
+                format="YYYY/MM/DD"
+                value-format="YYYY-MM-DD"
+                @change="validateDates"
+              />
+            </el-config-provider>
+            <div>
+              <p
+                v-show="errorEndDate.error === true"
+                class="text-[12px] text-red-400"
+              >
+                {{ errorEndDate.value }}
+              </p>
+            </div>
           </div>
         </div>
-        <div class="flex items-start flex-col">
-          <el-date-picker
-            v-model="param.createdTo"
-            type="date"
-            :placeholder="t('toDate')"
-            class="!min-w-[150px]"
-            format="YYYY/MM/DD"
-            value-format="YYYY-MM-DD"
-            @change="validateDates"
-          />
-          <div>
-            <p
-              v-show="errorEndDate.error === true"
-              class="text-[12px] text-red-400"
+        <div class="flex gap-2">
+          <el-form-item>
+            <el-button
+              @click="downloadFile"
+              :disabled="totalElements <= 0"
+              class="bg-blue-500 text-white hover:bg-blue-300"
             >
-              {{ errorEndDate.value }}
-            </p>
-          </div>
+              <Collection style="width: 1em; height: 1em; margin-right: 8px" />
+              {{ t("exportExcel") }}
+            </el-button>
+          </el-form-item>
+          <el-form-item>
+            <el-button
+              @click="addTabForm({}, Action.CREATE)"
+              class="bg-blue-500 text-white hover:bg-blue-300"
+            >
+              <Plus style="width: 1em; height: 1em; margin-right: 8px" />
+              {{ t("create") }}
+            </el-button>
+          </el-form-item>
         </div>
-        <el-form-item>
-          <el-button @click="downloadFile">
-            <Collection style="width: 1em; height: 1em; margin-right: 8px" />
-            {{ t("exportExcel") }}
-          </el-button>
-        </el-form-item>
-        <el-form-item>
-          <el-button @click="addTabForm({}, Action.CREATE)">
-            <Plus style="width: 1em; height: 1em; margin-right: 8px" />
-            {{ t("create") }}
-          </el-button>
-        </el-form-item>
       </el-form>
     </div>
     <div>
-      <el-table :data="objects">
-        <el-table-column label="STT" width="70">
-          <template #default="scope">
-            {{
-              ((data.pageIndex ?? 1) - 1) * (data.pageSize ?? 10) +
-              scope.$index +
-              1
-            }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="image" :label="t('image')">
-          <template #default="scope">
-            <img
-              v-if="!scope.row.image"
-              src="https://th.bing.com/th/id/OIP.xHvCevAq3nc3vJv2UjgE2AHaHa?pid=ImgDet&w=205&h=205&c=7"
-              alt="Image"
-              class="object-cover w-16"
-            />
-            <img
-              v-if="scope.row.image"
-              :src="`${APIURL}/file/${scope.row.image}`"
-              alt="Image"
-              class="object-cover w-16"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="name" :label="t('name')" sortable />
-        <el-table-column
-          prop="categoryCode"
-          :label="t('categoryCode')"
-          sortable
-          width="150"
-        />
-        <el-table-column
-          prop="description"
-          :label="t('description')"
-          sortable
-        />
-        <el-table-column
-          prop="createdDate"
-          :label="t('createdDate')"
-          sortable
-          width="125"
-        />
-        <el-table-column
-          prop="modifiedDate"
-          :label="t('modifiedDate')"
-          sortable
-          width="140"
-        />
-        <el-table-column prop="createdBy" :label="t('createdBy')" sortable />
-        <el-table-column prop="modifiedBy" :label="t('modifiedBy')" sortable />
-        <el-table-column prop="status" :label="t('status')" sortable>
-          <template #default="scope">
-            <p>
-              {{ scope.row.status === "ACTIVE" ? t("active") : t("inActive") }}
-            </p>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('action')" width="200" fixed="right">
-          <template #default="scope">
-            <div class="flex">
-              <el-tooltip :content="t('create')" placement="top">
-                <el-button @click="addTabForm(scope.row, Action.DETAIL)">
-                  <View style="width: 1em; height: 1em" />
-                </el-button>
-              </el-tooltip>
-              <el-tooltip :content="t('update')" placement="top">
-                <el-button @click="addTabForm(scope.row, Action.UPDATE)">
-                  <Edit style="width: 1em; height: 1em" />
-                </el-button>
-              </el-tooltip>
-              <el-tooltip :content="t('delete')" placement="top">
-                <el-button @click="openConfirmDelete(scope.row.id)">
-                  <Delete style="width: 1em; height: 1em" />
-                </el-button>
-              </el-tooltip>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <el-config-provider :locale="uiLocale">
+        <el-table :data="objects">
+          <el-table-column label="STT" width="70">
+            <template #default="scope">
+              {{
+                ((data.pageIndex ?? 1) - 1) * (data.pageSize ?? 10) +
+                scope.$index +
+                1
+              }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="image" :label="t('image')" width="120">
+            <template #default="scope">
+              <img
+                v-if="!scope.row.image"
+                src="https://th.bing.com/th/id/OIP.xHvCevAq3nc3vJv2UjgE2AHaHa?pid=ImgDet&w=205&h=205&c=7"
+                alt="Image"
+                class="object-cover w-16"
+              />
+              <img
+                v-if="scope.row.image"
+                :src="`${APIURL}/file/${scope.row.image}`"
+                alt="Image"
+                class="object-cover w-16"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="name"
+            :label="t('name')"
+            sortable
+            width="150"
+          />
+          <el-table-column
+            prop="categoryCode"
+            :label="t('categoryCode')"
+            sortable
+            width="150"
+          />
+          <el-table-column
+            width="250"
+            prop="description"
+            :label="t('description')"
+            sortable
+          />
+          <el-table-column
+            prop="createdDate"
+            :label="t('createdDate')"
+            sortable
+            width="125"
+          />
+          <el-table-column
+            prop="modifiedDate"
+            :label="t('modifiedDate')"
+            sortable
+            width="140"
+          />
+          <el-table-column
+            prop="createdBy"
+            :label="t('createdBy')"
+            sortable
+            width="140"
+          />
+          <el-table-column
+            width="130"
+            prop="modifiedBy"
+            :label="t('modifiedBy')"
+            sortable
+          />
+          <el-table-column
+            prop="status"
+            :label="t('status')"
+            sortable
+            width="140"
+          >
+            <template #default="scope">
+              <p>
+                {{
+                  scope.row.status === "ACTIVE" ? t("active") : t("inActive")
+                }}
+              </p>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('action')" width="200" fixed="right">
+            <template #default="scope">
+              <div class="flex">
+                <el-tooltip :content="t('detail')" placement="top">
+                  <el-button @click="addTabForm(scope.row, Action.DETAIL)">
+                    <View style="width: 1em; height: 1em" />
+                  </el-button>
+                </el-tooltip>
+                <el-tooltip :content="t('update')" placement="top">
+                  <el-button @click="addTabForm(scope.row, Action.UPDATE)">
+                    <Edit style="width: 1em; height: 1em" />
+                  </el-button>
+                </el-tooltip>
+                <el-tooltip :content="t('delete')" placement="top">
+                  <el-button @click="openConfirmDelete(scope.row.id)">
+                    <Delete style="width: 1em; height: 1em" />
+                  </el-button>
+                </el-tooltip>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-config-provider>
     </div>
     <div class="flex justify-end py-2">
       <div class="demo-pagination-block">

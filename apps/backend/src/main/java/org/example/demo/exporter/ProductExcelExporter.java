@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.demo.dto.product.response.ProductResponseDTO;
 import org.example.demo.entity.Category;
 import org.example.demo.entity.Product;
+import org.example.demo.exception.CustomExceptions;
 
 import java.io.IOException;
 import java.util.List;
@@ -93,15 +94,19 @@ public class ProductExcelExporter {
         }
     }
 
-    public void export(HttpServletResponse response) throws IOException {
+    public void export(HttpServletResponse response) {
         writeHeaderLine();
         writeDataLines();
 
-        ServletOutputStream outputStream = response.getOutputStream();
-        workbook.write(outputStream);
-        workbook.close();
+        try {
+            ServletOutputStream outputStream = response.getOutputStream();
+            workbook.write(outputStream);
+            workbook.close();
 
-        outputStream.close();
+            outputStream.close();
+        } catch (Exception ex) {
+            throw new CustomExceptions.ExcelExportException("ExcelExportException");
+        }
 
     }
 }

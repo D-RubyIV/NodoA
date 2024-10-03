@@ -20,15 +20,15 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
             SELECT DISTINCT c FROM Category c
             LEFT JOIN FETCH c.productCategories bc
             WHERE
-            (:name IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%')))
+            (:name IS NULL OR LOWER(c.name) LIKE LOWER(:name))
             AND
-            (:code IS NULL OR LOWER(c.categoryCode) LIKE LOWER(CONCAT('%', :code, '%')))
+            (:code IS NULL OR LOWER(c.categoryCode) LIKE LOWER(:code))
             AND
             (:createdFrom IS NULL OR c.createdDate >= :createdFrom)
             AND
             (:createdTo IS NULL OR c.createdDate <= :createdTo)
             AND
-            (c.status = 'ACTIVE')
+            (LOWER(c.status) LIKE 'active')
             """)
     Page<Category> findAllByPageWithQuery(
             @Param("name") String name,

@@ -47,7 +47,7 @@ services:
     networks:
       - dev
     environment:
-      VUE_APP_API_URL: https://d44a-2001-ee0-4141-bcf7-9056-3784-afba-649.ngrok-free.app/api/v1
+      VUE_APP_API_URL: https://9c67-2405-4802-3e6a-2290-c1cc-c1b8-7f65-aef4.ngrok-free.app/api/v1
    
   nginx:
     image: nginx:latest

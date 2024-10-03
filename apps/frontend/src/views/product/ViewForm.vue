@@ -9,8 +9,10 @@ import { CategoryOverview } from "@/views/category";
 import { Plus } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import { openMessageFail, openMessageSuccess } from "@/store/store";
-const patternSpecialChars = /[!@#$%^&*(),.?":{}|<>]/; // Kiểm tra ký tự đặc biệt
+
+const patternSpecialChars = /[-!@#$%^&*(),.?":{}|<>_]/; // Kiểm tra ký tự đặc biệt
 const { t } = useI18n();
+const apiUrl = process.env.VUE_APP_API_URL;
 
 const productRules = reactive<FormRules<ProductOverview>>({
   name: [
@@ -204,6 +206,9 @@ const onSubmitCreate = async () => {
         emitter.emit("custom-event", "Hello from Component B");
       })
       .catch(function (error) {
+        if (error?.response?.status === 400) {
+          openMessageFail(error.response.data.error);
+        }
         console.error(error);
       });
   }
@@ -236,6 +241,9 @@ const onSubmitUpdate = async () => {
         openMessageSuccess(t("updateSuccess"));
       })
       .catch(function (error) {
+        if (error?.response?.status === 400) {
+          openMessageFail(error.response.data.error);
+        }
         console.error(error);
       });
   }
@@ -251,11 +259,15 @@ const fetchProductObject = async () => {
     .get(`product/${props.selectedObject.id}`)
     .then(function (response) {
       productObject.value = response.data;
-      selectedCategoryOptions.value = (
-        productObject.value.categoryCodes as string
-      )
-        .split(", ")
-        .map((code) => code.trim());
+      console.log("productObject.value.categoryCodes");
+      console.log(productObject.value.categoryCodes);
+      if (productObject.value.categoryCodes) {
+        selectedCategoryOptions.value = (
+          productObject.value.categoryCodes as string
+        )
+          .split(", ")
+          .map((code) => code.trim());
+      }
     });
 };
 //hook
@@ -286,7 +298,9 @@ onMounted(() => {
       >
         <div class="grid grid-cols-3 gap-5">
           <!--          Image-->
-          <div class="col-span-1 bg-white rounded-b-md p-5 shadow-md">
+          <div
+            class="col-span-1 bg-white rounded-b-md p-5 shadow-md flex-col !flex !justify-center !items-center"
+          >
             <el-upload
               class="avatar-uploader"
               :show-file-list="false"
@@ -316,18 +330,45 @@ onMounted(() => {
                   class="avatar"
                   v-else-if="productObject.image"
                   alt=""
-                  :src="`http://localhost:8080/api/v1/file/${productObject.image}`"
+                  :src="`${apiUrl}/file/${productObject.image}`"
                 />
                 <img class="avatar" v-else :src="imgNotAvaiable" alt="" />
               </div>
             </el-upload>
-            <div class="text-[13px] grid grid-cols-2 gap-x-5">
-              <div class="text-right">
-                <p>{{ t("productCode") }}:</p>
+            <div v-if="action === 'DETAIL'">
+              <div
+                class="p-2 bg-gray-200 flex justify-center text-center text-sm rounded-md"
+              >
+                <div class="text-right">
+                  <p>{{ t("categoryCode") }}:</p>
+                </div>
+                <div class="text-left">
+                  <p>{{ productObject.productCode }}</p>
+                </div>
               </div>
-              <div class="text-left">
-                <p>{{ productObject.productCode }}</p>
+              <div
+                class="p-2 bg-green-100 flex justify-center text-center text-sm mt-2 rounded-md"
+              >
+                <div class="text-right">
+                  <p>{{ t("status") }}:</p>
+                </div>
+                <div class="text-left">
+                  <p>
+                    {{
+                      productObject.status === "ACTIVE"
+                        ? t("active")
+                        : productObject.status === "INACTIVE"
+                        ? t("inactive")
+                        : ""
+                    }}
+                  </p>
+                </div>
               </div>
+            </div>
+            <div
+              class="text-[13px] grid grid-cols-2 gap-x-5 gap-y-1 mt-2"
+              v-if="action !== 'CREATE' && action !== 'UPDATE'"
+            >
               <div class="text-right">
                 <p>{{ t("categoryCode") }}:</p>
               </div>
@@ -357,20 +398,6 @@ onMounted(() => {
               </div>
               <div class="text-left">
                 <p>{{ productObject.quantity }}</p>
-              </div>
-              <div class="text-right">
-                <p>{{ t("status") }}:</p>
-              </div>
-              <div class="text-left">
-                <p>
-                  {{
-                    productObject.status === "ACTIVE"
-                      ? t("active")
-                      : productObject.status === "INACTIVE"
-                      ? t("inactive")
-                      : ""
-                  }}
-                </p>
               </div>
               <div class="text-right">
                 <p>{{ t("createdDate") }}:</p>
@@ -409,7 +436,7 @@ onMounted(() => {
               </el-form-item>
               <el-form-item :label="t('productCode')" prop="productCode">
                 <el-input
-                  :disabled="isDisabled()"
+                  :disabled="action !== 'CREATE'"
                   v-model="(productObject as ProductOverview).productCode"
                 ></el-input>
               </el-form-item>
@@ -497,11 +524,7 @@ onMounted(() => {
                 ></el-input>
               </el-form-item>
 
-              <el-form-item
-                class="col-span-2"
-                :label="t('category')"
-                prop="selectedCategoryOptions"
-              >
+              <el-form-item class="col-span-2" :label="t('category')">
                 <el-select
                   class="!w-full"
                   v-model="selectedCategoryOptions"
@@ -522,13 +545,21 @@ onMounted(() => {
             </div>
             <div class="!flex !justify-end gap-5 py-5">
               <el-form-item>
-                <el-button @click="comeBackMain">{{ t("back") }}</el-button>
+                <el-button @click="comeBackMain" class="bg-gray-300">{{
+                  t("back")
+                }}</el-button>
               </el-form-item>
               <el-form-item>
-                <el-button v-if="action === 'CREATE'" @click="onSubmitCreate"
+                <el-button
+                  v-if="action === 'CREATE'"
+                  @click="onSubmitCreate"
+                  class="bg-blue-400 text-white"
                   >{{ t("create") }}
                 </el-button>
-                <el-button v-if="action === 'UPDATE'" @click="onSubmitUpdate"
+                <el-button
+                  v-if="action === 'UPDATE'"
+                  @click="onSubmitUpdate"
+                  class="bg-blue-400 text-white"
                   >{{ t("update") }}
                 </el-button>
               </el-form-item>

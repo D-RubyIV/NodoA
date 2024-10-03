@@ -12,4 +12,27 @@ public class CustomExceptions {
         }
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public static class CustomBadRequest extends RuntimeException {
+        public CustomBadRequest(String message) {
+            super(message);
+        }
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public static class CustomFileErrorException extends RuntimeException {
+        public CustomFileErrorException(String message) {
+            super(message);
+        }
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public static class ExcelExportException extends RuntimeException {
+        public ExcelExportException(String message) {
+            super(message);
+        }
+    }
+
+
+
 }
